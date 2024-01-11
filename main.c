@@ -2,6 +2,11 @@
 #include <inc/tm4c123gh6pm.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <driverlib/sysctl.h>
+#include <driverlib/interrupt.h>
+#include "driverlib/gpio.h"
+#include "driverlib/pin_map.h"
+#include "inc/hw_memmap.h"
 
 uint64_t get_uptime_cycles();
 void timeKeeperISR ();
@@ -66,17 +71,17 @@ uint64_t get_uptime_cycles(void) {
 
 void configureAdcTimer (void) {
 
-	SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R0; //Enable Run Mode Clock Gating Control for Timer 0
+    SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R0; //Enable Run Mode Clock Gating Control for Timer 0
 
-	while (!(SYSCTL_PRTIMER_R & SYSCTL_RCGCTIMER_R0)) {}
+    while (!(SYSCTL_PRTIMER_R & SYSCTL_RCGCTIMER_R0)) {}
 
-	TIMER0_CTL_R &= ~TIMER_CTL_TAEN; //Disable Timer
-	TIMER0_CTL_R |= TIMER_CTL_TASTALL; //Stall for debug
-	TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
-	TIMER0_TAMR_R |= TIMER_TAMR_TAMR_PERIOD; //Set Timer to count down periodically
-	TIMER0_TAILR_R = 16000 - 1;
-	TIMER0_CTL_R |= TIMER_CTL_TAOTE; //Set as an ADC Trigger
-	TIMER0_CTL_R |= TIMER_CTL_TAEN; //Enable Timer
+    TIMER0_CTL_R &= ~TIMER_CTL_TAEN; //Disable Timer
+    TIMER0_CTL_R |= TIMER_CTL_TASTALL; //Stall for debug
+    TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
+    TIMER0_TAMR_R |= TIMER_TAMR_TAMR_PERIOD; //Set Timer to count down periodically
+    TIMER0_TAILR_R = 16000 - 1;
+    TIMER0_CTL_R |= TIMER_CTL_TAOTE; //Set as an ADC Trigger
+    TIMER0_CTL_R |= TIMER_CTL_TAEN; //Enable Timer
 }
 
 //ADC
@@ -89,9 +94,9 @@ volatile uint16_t potReading;
 void ADCPinConfigure(void) {
 
     SYSCTL_RCGCADC_R |= SYSCTL_RCGCADC_R0;                      //Enable ADC Clock
-    while(!(SYSCTL_PRADC_R & SYSCTL_PRADC_R0)) {};              //Wait for peripheral to be ready
+    //while(!(SYSCTL_PRADC_R & SYSCTL_PRADC_R0)) {};              //Wait for peripheral to be ready
 
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4;                    //Enable GPIO Pin for ADC (PE5)
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4;                    //Enable GPIO Pin for ADC (PE4)
     while(!(SYSCTL_RCGCGPIO_R & SYSCTL_RCGCGPIO_R4)) {};        //Wait fo peripheral to be ready
 
     GPIO_PORTE_AFSEL_R |= GPIO_PIN4;                            //Set Alternate Function Select
@@ -140,15 +145,24 @@ void main(void) {
 
     configureDebounceTimer();
 
+    // configure the LED
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_3);
+
+
     int32_t last_time = 0;
 
     while(1) {
         if((uptime_seconds - last_time) < (potReading/409)){
-        //Turn LED on
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
         } else {
-        //Turn LED off
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, 0);
         }
-
-        if(uptime_seconds - last_time) >= 10) last_time = uptime_seconds;
+        printf("ADC value %d\n", potReading);
+        if((uptime_seconds - last_time) >= 10){
+            last_time = uptime_seconds;
+        }
     }
 }
