@@ -1,8 +1,6 @@
 //TIMERS
 #include <inc/tm4c123gh6pm.h>
 #include <stdbool.h>
-#include "driverlib/rom.h"
-#include "driverlib/map.h"
 #include <stdint.h>
 
 uint64_t get_uptime_cycles();
