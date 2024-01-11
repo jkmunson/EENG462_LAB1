@@ -151,5 +151,6 @@ void main(void) {
         //Turn LED off
         }
 
+        if(uptime_seconds - last_time) >= 10) last_time = uptime_seconds;
     }
 }
