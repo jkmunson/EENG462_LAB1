@@ -2,7 +2,7 @@
 #include <inc/tm4c123gh6pm.h>
 #include <stdbool.h>
 #include "driverlib/rom.h"
-#include "driverlib/rom_map.h"
+#include "driverlib/map.h"
 #include <stdint.h>
 
 uint64_t get_uptime_cycles();
@@ -10,7 +10,7 @@ void timeKeeperISR ();
 void configureDebounceTimer();
 
 #define TIMER1_MULTIPLIER 32 //Number of times timer1 will overflow, and trigger it's interrupt each second
-#define TIMER_CYCLES (ROM_SysCtlClockGet()/TIMER1_MULTIPLIER)
+#define TIMER_CYCLES (SysCtlClockGet()/TIMER1_MULTIPLIER)
 
 volatile int32_t uptime_seconds;
 volatile uint64_t timer1_overflow_count;
@@ -66,6 +66,20 @@ uint64_t get_uptime_cycles(void) {
     return (TIMER_CYCLES * overflow_count_now) + cycles_now;
 }
 
+void configureAdcTimer (void) {
+
+	SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R0; //Enable Run Mode Clock Gating Control for Timer 0
+
+	while (!(SYSCTL_PRTIMER_R & SYSCTL_RCGCTIMER_R0)) {}
+
+	TIMER0_CTL_R &= ~TIMER_CTL_TAEN; //Disable Timer
+	TIMER0_CTL_R |= TIMER_CTL_TASTALL; //Stall for debug
+	TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
+	TIMER0_TAMR_R |= TIMER_TAMR_TAMR_PERIOD; //Set Timer to count down periodically
+	TIMER0_TAILR_R = 16000 - 1;
+	TIMER0_CTL_R |= TIMER_CTL_TAOTE; //Set as an ADC Trigger
+	TIMER0_CTL_R |= TIMER_CTL_TAEN; //Enable Timer
+}
 
 //ADC
 
@@ -119,14 +133,14 @@ void saveADCSample(void){
 void main(void) {
     configureDebounceTimer();
 
-    ROM_IntRegister(INT_TIMER1A, timeKeeperISR);
+    IntRegister(INT_TIMER1A, timeKeeperISR);
 
-    ROM_IntRegister(INT_ADC0SS3, saveADCSample);
+    IntRegister(INT_ADC0SS3, saveADCSample);
 
-    ADCPinConfigure(void);
-    ADCSampleSequencerConfigure(void);
+    ADCPinConfigure();
+    ADCSampleSequencerConfigure();
 
-    configureDebounceTimer(void);
+    configureDebounceTimer();
 
     int32_t last_time = 0;
 
