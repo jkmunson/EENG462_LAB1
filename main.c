@@ -45,17 +45,17 @@ void configureDebounceTimer(void) {
 }
 
 void timeKeeperISR (void) {
-    printf("Timer ISR %d\n", uptime_seconds % 10);
-    printf("UpTime: %d\n"
-            "Raw ADC value: %d\n"
-            "Fixed ADC value: %d\n"
-            "Last_time: %d\n"
-            "if statement calculation: %d\n"
-            "pot divider calculation: %d\n"
-            "uptime minus lastime calculation: %d\n",
-            uptime_seconds, potReading, fixed_pot_reading, last_time,
-            (uptime_seconds - last_time) < ((fixed_pot_reading)/260)),
-            (fixed_pot_reading/260), uptime_seconds-last_time;
+//    printf("Timer ISR %d\n", uptime_seconds % 10);
+//    printf("UpTime: %d\n"
+//            "Raw ADC value: %d\n"
+//            "Fixed ADC value: %d\n"
+//            "Last_time: %d\n"
+//            "if statement calculation: %d\n"
+//            "pot divider calculation: %d\n"
+//            "uptime minus lastime calculation: %d\n",
+//            uptime_seconds, potReading, fixed_pot_reading, last_time,
+//            ((uptime_seconds - last_time) < ((fixed_pot_reading)/260)),
+//            (fixed_pot_reading/260), uptime_seconds-last_time);
     static char second_counter = 0;
 
     TIMER1_IMR_R &= ~TIMER_IMR_TATOIM; //Disable Interrupt
@@ -154,8 +154,6 @@ void main(void) {
 
     TimerIntRegister(TIMER1_BASE, TIMER_A, timeKeeperISR);
 
-    //IntRegister(INT_TIMER1A, timeKeeperISR);
-
     IntRegister(INT_ADC0SS3, saveADCSample);
     configureDebounceTimer();
     ADCPinConfigure();
@@ -173,20 +171,12 @@ void main(void) {
     //int32_t last_time = 0;
 
     while(1) {
-        //int fixed_pot_reading = (potReading - 1200) > 0 ? (potReading - 1200) : 0;
-        fixed_pot_reading = (potReading - 1200) > 0 ? (potReading - 1200) : 0;
-        fixed_pot_reading = (fixed_pot_reading < 2600) ? fixed_pot_reading : 2599;
-        //printf("UpTime: %d\n", uptime_seconds);
-        if((uptime_seconds - last_time) < ((fixed_pot_reading)/260)){
+        if((uptime_seconds - last_time) < ((potReading)/490)){
             GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
         } else {
             GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, 0);
         }
-        //printf("Timer ISR %d\n", uptime_seconds % 10);
-        //printf("UpTime: %d\nRaw ADC value: %d\nFixed ADC value: %d\n", uptime_seconds, potReading, fixed_pot_reading);
-        //printf("Raw ADC value: %d\n", potReading);
-        //printf("Fixed ADC value: %d\n", fixed_pot_reading);
-        if((uptime_seconds - last_time) >= 9){
+        if((uptime_seconds - last_time) > 9){
             last_time = uptime_seconds;
         }
     }
